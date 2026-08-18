@@ -118,7 +118,8 @@ gh secret set ADMIN_VPS_HOST --repo "$CONTROL_REPO" --body "$BRIDGE_HOST"
 gh secret set ADMIN_VPS_PORT --repo "$CONTROL_REPO" --body "$BRIDGE_PORT"
 gh secret set ADMIN_VPS_USER --repo "$CONTROL_REPO" --body "$BRIDGE_USER"
 gh secret set ADMIN_VPS_SSH_KEY --repo "$CONTROL_REPO" < "$KEY"
-printf '%s' "$KNOWN_HOSTS" | gh secret set ADMIN_VPS_KNOWN_HOSTS --repo "$CONTROL_REPO"
+[ -n "$KNOWN_HOSTS" ] || { echo 'ERROR: SSH known_hosts could not be constructed.' >&2; exit 24; }
+gh secret set ADMIN_VPS_KNOWN_HOSTS --repo "$CONTROL_REPO" --body "$KNOWN_HOSTS"
 
 echo
 echo 'Ajint installed.'
