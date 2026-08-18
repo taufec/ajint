@@ -3,7 +3,7 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [feature/parallel-orchestrator]
+    branches: [main]
 
 permissions:
   contents: read

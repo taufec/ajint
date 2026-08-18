@@ -123,17 +123,24 @@ fi
 
 printf 'PASS: installer wiring tests\n'
 
-# Test 7: fresh installs include every parallel execution component and do not seed dispatch.txt.
-for expected in \
-  'template/.github/workflows/parallel.yml:.github/workflows/parallel.yml' \
-  'template/scripts/run-request.sh:scripts/run-request.sh' \
-  'template/scripts/run-wave.sh:scripts/run-wave.sh' \
-  'template/scripts/run-orchestrator.sh:scripts/run-orchestrator.sh' \
-  'template/scripts/run-dispatch.sh:scripts/run-dispatch.sh'; do
-  grep -Fq "$expected" "$ROOT/install.sh" || fail "installer missing $expected"
-done
-if grep -Fq 'template/requests/dispatch.txt:requests/dispatch.txt' "$ROOT/install.sh"; then
-  fail 'installer must not seed dispatch.txt'
-fi
+# Test 8: original run-admin entry point remains compatible.
+mkdir -p "$TMP/t8"
+printf '%s\n' 'printf "legacy-ok\\n"' > "$TMP/t8/request.sh"
+bash "$SCRIPTS/run-admin.sh" "$TMP/t8/request.sh" "$TMP/t8/result"
+assert_eq "$(cat "$TMP/t8/result/stdout.txt")" legacy-ok
+assert_eq "$(cat "$TMP/t8/result/exit-code.txt")" 0
 
-printf 'PASS: installer wiring tests\n'
+# Test 9: a wave above the configured cap is rejected before any request starts.
+mkdir -p "$TMP/t9/wave" "$TMP/t9/result"
+printf '%s\n' 'touch "$AJINT_TEST_SHARED/cap-a"' > "$TMP/t9/wave/a.sh"
+printf '%s\n' 'touch "$AJINT_TEST_SHARED/cap-b"' > "$TMP/t9/wave/b.sh"
+set +e
+AJINT_MAX_PARALLEL=1 bash "$SCRIPTS/run-wave.sh" "$TMP/t9/wave" "$TMP/t9/result"
+rc=$?
+set -e
+[ "$rc" -ne 0 ] || fail 'over-cap wave returned success'
+[ ! -e "$AJINT_TEST_SHARED/cap-a" ] || fail 'over-cap wave started worker a'
+[ ! -e "$AJINT_TEST_SHARED/cap-b" ] || fail 'over-cap wave started worker b'
+
+grep -Fq 'Parallel batch:' "$ROOT/install.sh" || fail 'generated control README lacks parallel instructions'
+printf 'PASS: compatibility and cap tests\n'

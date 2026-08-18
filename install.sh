@@ -77,7 +77,7 @@ if ! gh repo view "$CONTROL_REPO" >/dev/null 2>&1; then
     --description 'Private Ajint machine control plane' >/dev/null
 fi
 
-mkdir -p "$WORK/repo/.github/workflows" "$WORK/repo/scripts" "$WORK/repo/requests" "$WORK/repo/requests/batches" "$WORK/repo/requests/batches"
+mkdir -p "$WORK/repo/.github/workflows" "$WORK/repo/scripts" "$WORK/repo/requests" "$WORK/repo/requests/batches"
 for pair in \
   'template/.github/workflows/admin.yml:.github/workflows/admin.yml' \
   'template/.github/workflows/parallel.yml:.github/workflows/parallel.yml' \
@@ -101,7 +101,11 @@ Target: \`$BRIDGE_USER@$BRIDGE_HOST:$BRIDGE_PORT\`
 
 Flow: AI/Agent -> GitHub -> GitHub Actions -> Ajint -> machine
 
-Edit \`requests/current.sh\` to submit a remote task. Check the workflow artifact for stdout, stderr, exit code, and request SHA-256.
+Single request: edit \`requests/current.sh\`.
+
+Parallel batch: create \`requests/batches/<batch-id>/<wave>/*.sh\`, then create or change \`requests/dispatch.txt\` to that batch id as the final trigger. Requests inside a wave run concurrently; waves run in lexical order and stop on failure.
+
+Check the workflow artifact for stdout, stderr, exit codes, request hashes, and the aggregated summary.
 DOC
 
 if [ ! -d "$WORK/repo/.git" ]; then
