@@ -1,0 +1,42 @@
+name: Machine Parallel
+
+on:
+  push:
+    branches: [main]
+    paths: [requests/dispatch.txt]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ajint-machine-parallel
+  cancel-in-progress: false
+
+jobs:
+  parallel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      AJINT_MAX_PARALLEL: 4
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Run dispatched batch on machine
+        env:
+          ADMIN_VPS_HOST: ${{ secrets.ADMIN_VPS_HOST }}
+          ADMIN_VPS_PORT: ${{ secrets.ADMIN_VPS_PORT }}
+          ADMIN_VPS_USER: ${{ secrets.ADMIN_VPS_USER }}
+          ADMIN_VPS_SSH_KEY: ${{ secrets.ADMIN_VPS_SSH_KEY }}
+          ADMIN_VPS_KNOWN_HOSTS: ${{ secrets.ADMIN_VPS_KNOWN_HOSTS }}
+        run: bash scripts/run-dispatch.sh requests/dispatch.txt
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: machine-parallel-${{ github.run_id }}
+          path: result/
+          retention-days: 7

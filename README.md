@@ -97,6 +97,27 @@ Current compatibility variables:
 - `BRIDGE_USER` - current OS user, default `id -un`
 - `BRIDGE_REPO` - private control repo name, default `ajint-machine-admin`
 
+
+## Parallel orchestration — ChatGPT commander mode
+
+ChatGPT remains the only reasoning layer. Ajint can execute deterministic shell requests in bounded parallel waves; the workers are executors, not independent AI agents.
+
+```text
+ChatGPT commander
+       ↓
+private GitHub control repo
+       ↓
+Ajint parallel orchestrator
+       ↓
+wave 10: inspect-a.sh + inspect-b.sh + inspect-c.sh  (parallel)
+       ↓ success only
+wave 20: verify-a.sh + verify-b.sh                   (parallel)
+       ↓
+structured evidence → ChatGPT
+```
+
+Prepare a batch under `requests/batches/<batch-id>/<wave>/*.sh`. Only creating/changing `requests/dispatch.txt` to `<batch-id>` triggers execution. Requests in one wave run concurrently (default cap 4); waves run lexically and stop after the first failed wave. Conflicting writes and production deploys should use separate/single-worker waves.
+
 ## Security
 
 Ajint is a privileged remote-execution control plane. Anyone able to modify the generated private control repo may be able to execute commands as the configured SSH user.

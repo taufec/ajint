@@ -1,0 +1,23 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  shell-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Check shell syntax
+        run: bash -n install.sh tests/*.sh template/scripts/*.sh
+      - name: Linux bootstrap contract
+        run: bash tests/test-linux-bootstrap-contract.sh
+      - name: Parallel orchestrator behavior
+        run: bash tests/test-orchestrator.sh
