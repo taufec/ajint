@@ -159,6 +159,42 @@ The target must be reachable from GitHub-hosted runners over SSH.
 
 This is the planned path for laptops, desktops, homelabs, and machines behind NAT where inbound SSH should not be exposed.
 
+
+## Parallel orchestration — ChatGPT commander mode
+
+Ajint can also execute a batch of deterministic VPS requests without adding another AI runtime. ChatGPT remains the only reasoning layer; the parallel workers are shell executors, not independent agents.
+
+```text
+ChatGPT commander
+       ↓
+GitHub control repo
+       ↓
+Ajint parallel orchestrator
+       ↓
+wave 10: inspect-a.sh + inspect-b.sh + inspect-c.sh   (parallel)
+       ↓ success only
+wave 20: verify-a.sh + verify-b.sh                    (parallel)
+       ↓
+structured result artifact
+       ↓
+ChatGPT decides the next batch
+```
+
+A batch is prepared under:
+
+```text
+requests/batches/<batch-id>/
+  10-inspect/
+    logs.sh
+    services.sh
+  20-verify/
+    health.sh
+```
+
+Preparing batch files does not execute them. The atomic trigger is `requests/dispatch.txt`; set its single line to `<batch-id>` only after the batch is ready. The parallel workflow defaults to at most 4 requests in one wave, runs waves in lexical order, waits for all workers in the current wave, and stops before later waves if any worker fails.
+
+For conflicting writes, put requests in separate waves. Production mutation or deploy should normally be a single-worker wave.
+
 ## Roadmap direction
 
 ```text

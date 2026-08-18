@@ -107,3 +107,18 @@ set -e
 [ "$rc" -ne 0 ] || fail 'invalid dispatch id accepted'
 
 printf 'PASS: orchestrator tests\n'
+
+# Test 7: fresh installs include every parallel execution component and do not seed dispatch.txt.
+for expected in \
+  'template/.github/workflows/parallel.yml:.github/workflows/parallel.yml' \
+  'template/scripts/run-request.sh:scripts/run-request.sh' \
+  'template/scripts/run-wave.sh:scripts/run-wave.sh' \
+  'template/scripts/run-orchestrator.sh:scripts/run-orchestrator.sh' \
+  'template/scripts/run-dispatch.sh:scripts/run-dispatch.sh'; do
+  grep -Fq "$expected" "$ROOT/install.sh" || fail "installer missing $expected"
+done
+if grep -Fq 'template/requests/dispatch.txt:requests/dispatch.txt' "$ROOT/install.sh"; then
+  fail 'installer must not seed dispatch.txt'
+fi
+
+printf 'PASS: installer wiring tests\n'

@@ -77,10 +77,15 @@ if ! gh repo view "$CONTROL_REPO" >/dev/null 2>&1; then
     --description 'Private Ajint machine control plane' >/dev/null
 fi
 
-mkdir -p "$WORK/repo/.github/workflows" "$WORK/repo/scripts" "$WORK/repo/requests"
+mkdir -p "$WORK/repo/.github/workflows" "$WORK/repo/scripts" "$WORK/repo/requests" "$WORK/repo/requests/batches"
 for pair in \
   'template/.github/workflows/admin.yml:.github/workflows/admin.yml' \
+  'template/.github/workflows/parallel.yml:.github/workflows/parallel.yml' \
   'template/scripts/run-admin.sh:scripts/run-admin.sh' \
+  'template/scripts/run-request.sh:scripts/run-request.sh' \
+  'template/scripts/run-wave.sh:scripts/run-wave.sh' \
+  'template/scripts/run-orchestrator.sh:scripts/run-orchestrator.sh' \
+  'template/scripts/run-dispatch.sh:scripts/run-dispatch.sh' \
   'template/requests/current.sh:requests/current.sh'; do
   src="${pair%%:*}"
   dest="${pair#*:}"
