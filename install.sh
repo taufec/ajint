@@ -43,7 +43,47 @@ install_missing_dependencies() {
   fi
 }
 
+install_gh_standalone() {
+  command -v gh >/dev/null 2>&1 && return 0
+  command -v python3 >/dev/null 2>&1 || return 1
+
+  local gh_dir helper
+  if [ "$(id -u)" -eq 0 ] || [ -w /usr/local/bin ]; then
+    gh_dir='/usr/local/bin'
+  else
+    gh_dir="$HOME/.local/bin"
+    mkdir -p "$gh_dir"
+  fi
+
+  helper="$(mktemp)"
+  if ! python3 - "$helper" "$UPSTREAM" "$AJINT_REF" <<'PYHELPER'
+import pathlib, sys, urllib.request
+path = pathlib.Path(sys.argv[1])
+url = f"https://raw.githubusercontent.com/{sys.argv[2]}/{sys.argv[3]}/scripts/install-gh-standalone.py"
+req = urllib.request.Request(url, headers={"User-Agent": "Ajint/gh-bootstrap"})
+with urllib.request.urlopen(req, timeout=30) as r:
+    path.write_bytes(r.read())
+PYHELPER
+  then
+    rm -f "$helper"
+    return 1
+  fi
+
+  if ! AJINT_GH_INSTALL_DIR="$gh_dir" python3 "$helper"; then
+    rm -f "$helper"
+    return 1
+  fi
+  rm -f "$helper"
+  export PATH="$gh_dir:$PATH"
+  command -v gh >/dev/null 2>&1 || return 1
+  log 'GH_STANDALONE_FALLBACK=1'
+}
+
 install_missing_dependencies
+if ! command -v gh >/dev/null 2>&1; then
+  log 'Ajint: package manager did not provide gh; trying official standalone GitHub CLI...'
+  install_gh_standalone || true
+fi
 for c in gh git ssh ssh-keygen curl awk base64 mktemp; do
   command -v "$c" >/dev/null 2>&1 || die "required command still missing after bootstrap: $c" 20
 done
@@ -109,7 +149,7 @@ done
 if [ -z "$KNOWN_HOSTS" ]; then
   KNOWN_HOSTS="$(ssh-keyscan -T 8 -p "$BRIDGE_PORT" "$BRIDGE_HOST" 2>/dev/null || true)"
 fi
-[ -n "$KNOWN_HOSTS" ] || die 'SSH known_hosts could not be constructed' 24
+[ -n "$KNOWN_HOSTS" ] || die 'SSH_MODE_UNSUPPORTED: no readable SSH host key and target host/port did not answer ssh-keyscan' 24
 
 REPO_EXISTS=0
 if gh repo view "$CONTROL_REPO" >/dev/null 2>&1; then

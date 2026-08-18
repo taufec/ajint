@@ -42,7 +42,7 @@ If Git is available:
 d=$(mktemp -d) && git clone -q --depth 1 https://github.com/taufec/ajint "$d" && bash "$d/install.sh"; rc=$?; rm -rf "$d"; exit $rc
 ```
 
-Ajint auto-installs missing runtime tools (`gh`, `curl`, Git and OpenSSH client utilities) when it can use `apt-get`, `apk`, `dnf` or `yum` with root/sudo.
+Ajint auto-installs missing runtime tools (`gh`, `curl`, Git and OpenSSH client utilities) when it can use `apt-get`, `apk`, `dnf` or `yum` with root/sudo. If a restricted Linux environment reports package-manager success but still does not expose `gh`, Ajint falls back to GitHub CLI's official precompiled Linux release when Python 3 is available.
 
 GitHub authentication is still a one-time trust boundary. Either authenticate first with `gh auth login`, or provide `GH_TOKEN` / `AJINT_GITHUB_TOKEN` through a secure environment.
 
