@@ -40,3 +40,10 @@ AJINT_GH_RELEASE_API="file://$TMP/release.json" AJINT_GH_INSTALL_DIR="$TMP/bin" 
 "$TMP/bin/gh" --version | grep -Fq '9.9.9 fake' || fail 'installed standalone gh does not execute'
 
 echo 'PASS: Vellum compatibility contract'
+
+# SSH support must be rejected before asking for GitHub authentication.
+preflight_call="$(grep -n '^preflight_ssh_mode$' install.sh | head -n1 | cut -d: -f1)"
+auth_check="$(grep -n '^if ! gh auth status' install.sh | head -n1 | cut -d: -f1)"
+[ -n "$preflight_call" ] || fail 'SSH preflight call missing'
+[ -n "$auth_check" ] || fail 'GitHub auth check missing'
+[ "$preflight_call" -lt "$auth_check" ] || fail 'GitHub auth is checked before SSH-mode support'
