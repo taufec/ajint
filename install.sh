@@ -77,7 +77,7 @@ if ! gh repo view "$CONTROL_REPO" >/dev/null 2>&1; then
     --description 'Private Ajint machine control plane' >/dev/null
 fi
 
-mkdir -p "$WORK/repo/.github/workflows" "$WORK/repo/scripts" "$WORK/repo/requests" "$WORK/repo/requests/batches"
+mkdir -p "$WORK/repo/.github/workflows" "$WORK/repo/scripts" "$WORK/repo/requests" "$WORK/repo/requests/batches" "$WORK/repo/requests/batches"
 for pair in \
   'template/.github/workflows/admin.yml:.github/workflows/admin.yml' \
   'template/.github/workflows/parallel.yml:.github/workflows/parallel.yml' \
