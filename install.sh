@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-UPSTREAM="taufec/chatgpt-gitops"
+UPSTREAM="taufec/ajint"
 BRIDGE_PORT="${BRIDGE_PORT:-22}"
-BRIDGE_REPO="${BRIDGE_REPO:-chatgpt-machine-admin}"
+BRIDGE_REPO="${BRIDGE_REPO:-ajint-machine-admin}"
 BRIDGE_USER="${BRIDGE_USER:-$(id -un)}"
 
 need() {
@@ -47,7 +47,7 @@ cleanup() { rm -rf "$KEY_DIR" "$WORK"; }
 trap cleanup EXIT
 KEY="$KEY_DIR/bridge_ed25519"
 
-ssh-keygen -q -t ed25519 -N '' -C "chatgpt-gitops:$CONTROL_REPO" -f "$KEY"
+ssh-keygen -q -t ed25519 -N '' -C "ajint:$CONTROL_REPO" -f "$KEY"
 mkdir -p "$SSH_DIR"
 chmod 700 "$SSH_DIR"
 touch "$AUTH_KEYS"
@@ -74,7 +74,7 @@ fi
 if ! gh repo view "$CONTROL_REPO" >/dev/null 2>&1; then
   gh repo create "$CONTROL_REPO" \
     --private \
-    --description 'Private ChatGPT GitOps machine control plane' >/dev/null
+    --description 'Private Ajint machine control plane' >/dev/null
 fi
 
 mkdir -p "$WORK/repo/.github/workflows" "$WORK/repo/scripts" "$WORK/repo/requests"
@@ -90,7 +90,7 @@ done
 cat > "$WORK/repo/README.md" <<DOC
 # $BRIDGE_REPO
 
-Private machine control plane created by ChatGPT GitOps.
+Private machine control plane created by Ajint.
 
 Target: \`$BRIDGE_USER@$BRIDGE_HOST:$BRIDGE_PORT\`
 
@@ -105,11 +105,11 @@ if [ ! -d "$WORK/repo/.git" ]; then
 fi
 
 git -C "$WORK/repo" add .
-GIT_AUTHOR_NAME='ChatGPT GitOps' \
+GIT_AUTHOR_NAME='Ajint' \
 GIT_AUTHOR_EMAIL='bridge@localhost' \
-GIT_COMMITTER_NAME='ChatGPT GitOps' \
+GIT_COMMITTER_NAME='Ajint' \
 GIT_COMMITTER_EMAIL='bridge@localhost' \
-  git -C "$WORK/repo" commit -m 'Initialize ChatGPT GitOps control plane' >/dev/null
+  git -C "$WORK/repo" commit -m 'Initialize Ajint control plane' >/dev/null
 
 gh auth setup-git >/dev/null 2>&1 || true
 git -C "$WORK/repo" push -u origin main --force >/dev/null
@@ -121,7 +121,7 @@ gh secret set ADMIN_VPS_SSH_KEY --repo "$CONTROL_REPO" < "$KEY"
 printf '%s' "$KNOWN_HOSTS" | gh secret set ADMIN_VPS_KNOWN_HOSTS --repo "$CONTROL_REPO"
 
 echo
-echo 'ChatGPT GitOps installed.'
+echo 'Ajint installed.'
 echo "Control repo: https://github.com/$CONTROL_REPO"
 echo "Target: $BRIDGE_USER@$BRIDGE_HOST:$BRIDGE_PORT"
 echo
