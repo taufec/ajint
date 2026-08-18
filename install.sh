@@ -79,6 +79,15 @@ PYHELPER
   log 'GH_STANDALONE_FALLBACK=1'
 }
 
+preflight_ssh_mode() {
+  local pub
+  for pub in /etc/ssh/ssh_host_ed25519_key.pub /etc/ssh/ssh_host_ecdsa_key.pub /etc/ssh/ssh_host_rsa_key.pub; do
+    [ -r "$pub" ] && return 0
+  done
+  ssh-keyscan -T 8 -p "$BRIDGE_PORT" "$BRIDGE_HOST" >/dev/null 2>&1 && return 0
+  die 'SSH_MODE_UNSUPPORTED: no readable SSH host key and target host/port did not answer ssh-keyscan' 24
+}
+
 install_missing_dependencies
 if ! command -v gh >/dev/null 2>&1; then
   log 'Ajint: package manager did not provide gh; trying official standalone GitHub CLI...'
@@ -87,6 +96,12 @@ fi
 for c in gh git ssh ssh-keygen curl awk base64 mktemp; do
   command -v "$c" >/dev/null 2>&1 || die "required command still missing after bootstrap: $c" 20
 done
+
+if [ -z "${BRIDGE_HOST:-}" ]; then
+  BRIDGE_HOST="$(curl -4 -fsSL --max-time 8 https://api.ipify.org 2>/dev/null || true)"
+fi
+[ -n "${BRIDGE_HOST:-}" ] || die 'public host could not be detected; re-run with BRIDGE_HOST=<public-ip-or-dns>' 22
+preflight_ssh_mode
 
 if [ -n "${AJINT_GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ]; then
   export GH_TOKEN="$AJINT_GITHUB_TOKEN"
@@ -105,11 +120,6 @@ fi
 
 GH_OWNER="$(gh api user --jq .login)"
 CONTROL_REPO="$GH_OWNER/$BRIDGE_REPO"
-
-if [ -z "${BRIDGE_HOST:-}" ]; then
-  BRIDGE_HOST="$(curl -4 -fsSL --max-time 8 https://api.ipify.org 2>/dev/null || true)"
-fi
-[ -n "${BRIDGE_HOST:-}" ] || die 'public host could not be detected; re-run with BRIDGE_HOST=<public-ip-or-dns>' 22
 
 if [ "$BRIDGE_USER" != "$(id -un)" ]; then
   die "MVP installs SSH authorization for the current OS user only (current=$(id -un), requested=$BRIDGE_USER)" 23
