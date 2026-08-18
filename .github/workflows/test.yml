@@ -16,6 +16,8 @@ jobs:
         with:
           persist-credentials: false
       - name: Check shell syntax
-        run: bash -n install.sh tests/test-orchestrator.sh template/scripts/*.sh
-      - name: Run orchestrator tests
+        run: bash -n install.sh tests/*.sh template/scripts/*.sh
+      - name: Linux bootstrap contract
+        run: bash tests/test-linux-bootstrap-contract.sh
+      - name: Parallel orchestrator behavior
         run: bash tests/test-orchestrator.sh

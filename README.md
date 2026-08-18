@@ -2,116 +2,85 @@
 
 **AI decides. GitHub carries the instruction. Ajint executes it on the machine.**
 
-Ajint is a lightweight GitHub-based remote execution adapter for AI agents. It connects an AI or agent running outside your server to a Linux VPS/server through GitHub Actions and SSH.
+Ajint is a lightweight, AI-agnostic execution adapter for remote Linux machines. It gives an AI/agent remote hands through GitHub Actions and SSH while keeping execution evidence in GitHub.
 
 ```text
 AI / Agent
     ↓
-GitHub control repo
+private GitHub control repo
     ↓
 GitHub Actions
-    ↓
-Ajint SSH execution layer
-    ↓
+    ↓ SSH
 Linux machine
     ↓
 stdout / stderr / exit code / request hash
     ↓
 GitHub
-    ↓
-AI / Agent
 ```
 
-Ajint is **not the AI agent itself**. It is the execution/control layer that gives an agent remote hands on a machine.
+Ajint is **not the AI agent**. Memory, planning, policy and reasoning belong to the agent runtime above it. Ajint focuses on transport, execution and evidence.
 
-That means the intelligence layer can change independently:
+## Install
 
-```text
-ChatGPT ─┐
-Gemini ──┤
-Kimi ────┤
-Codex ───┤
-Claude ──┤
-other AI ┘
-          ↓
-        Ajint
-          ↓
-       machine
-```
-
-The current phase focuses on the execution adapter first. A future integration can plug Ajint into agent runtimes such as GitHub Agentic Workflows instead of rebuilding memory, planning, policy, and agent harnesses from scratch.
-
-## One-line install
-
-Run this on the Linux VPS/server you want to connect:
+### Standard Linux
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/taufec/ajint/main/install.sh | bash
 ```
 
-The installer creates a **private per-machine GitHub control repo**, generates a dedicated SSH identity, configures GitHub Actions secrets, installs the execution workflow, and prepares a harmless acceptance test.
+### Minimal Linux (no curl required)
+
+If Python 3 is available:
+
+```bash
+python3 -c "import urllib.request;exec(compile(urllib.request.urlopen('https://raw.githubusercontent.com/taufec/ajint/main/bootstrap.py').read(),'bootstrap.py','exec'))"
+```
+
+If Git is available:
+
+```bash
+d=$(mktemp -d) && git clone -q --depth 1 https://github.com/taufec/ajint "$d" && bash "$d/install.sh"; rc=$?; rm -rf "$d"; exit $rc
+```
+
+Ajint auto-installs missing runtime tools (`gh`, `curl`, Git and OpenSSH client utilities) when it can use `apt-get`, `apk`, `dnf` or `yum` with root/sudo.
+
+GitHub authentication is still a one-time trust boundary. Either authenticate first with `gh auth login`, or provide `GH_TOKEN` / `AJINT_GITHUB_TOKEN` through a secure environment.
+
+## What the installer does
+
+1. Detects/installs missing runtime dependencies.
+2. Verifies GitHub authentication.
+3. Creates or reuses a private per-machine control repo (default `ajint-machine-admin`).
+4. Rotates one dedicated Ajint SSH key without accumulating duplicate Ajint keys.
+5. Configures GitHub Actions secrets **before** workflow-triggering pushes.
+6. Creates/updates Ajint-managed control files without force-pushing the repo.
+7. Dispatches a real GitHub Actions acceptance test.
+8. Downloads the result artifact and only prints `AJINT_ACCEPTANCE=PASS` when remote exit code is `0` and the expected output is present.
+
+Re-running the installer is supported: unrelated files/history in the private control repo are preserved.
 
 ## Requirements
 
-Current SSH-mode MVP requires:
+Current SSH mode requires:
 
-- Linux VPS/server reachable by SSH from GitHub-hosted runners
-- `gh`, `git`, `ssh`, `ssh-keygen`, `curl`
-- GitHub CLI authenticated on the target machine
-- a GitHub account allowed to create private repositories and Actions secrets
+- a Linux VPS/server reachable from GitHub-hosted runners over SSH
+- Bash
+- at least one way to fetch the installer (`curl`, Python 3, or Git)
+- root/sudo only if dependencies need to be installed
+- a GitHub account that can create private repositories, Actions secrets and workflows
 
-Check authentication:
+The target must already have a working SSH server reachable on the configured host/port. Ajint does not silently open firewalls or install/enable `sshd`.
 
-```bash
-gh auth status
-```
+## Tested Linux targets
 
-If needed:
+Real internet → GitHub Actions → SSH → target → artifact E2E is part of the release gate.
 
-```bash
-gh auth login
-```
+- Debian 13 (trixie)
+- Ubuntu 24.04 LTS
 
-Then run the installer again.
+Other Linux distributions have package-manager fallbacks but remain unverified until their own E2E test passes.
 
-## What gets created
-
-By default Ajint creates a private control repository named:
-
-```text
-ajint-machine-admin
-```
-
-It contains:
-
-```text
-.github/workflows/admin.yml
-requests/current.sh
-scripts/run-admin.sh
-```
-
-The public `ajint` repository contains the reusable installer/template. Machine credentials stay in GitHub Actions secrets inside the generated **private** control repository.
-
-## How it works
-
-1. An AI/agent edits `requests/current.sh` in the private control repo.
-2. A push to `main` triggers GitHub Actions.
-3. The GitHub-hosted runner connects to the target using a dedicated SSH key.
-4. The request is piped to `bash -se` on the target machine.
-5. stdout, stderr, exit code, and request SHA-256 are saved as an Actions artifact.
-6. The AI/agent reads the evidence and decides what to do next.
-
-For changes, the intended operating pattern is:
-
-```text
-inspect -> change -> verify
-```
-
-A workflow starting successfully is **not** proof that the remote command succeeded. Check the remote exit code and result artifact.
-
-## Custom install
-
-Override connection details or the generated private repo name:
+## Custom target
 
 ```bash
 BRIDGE_HOST=203.0.113.10 \
@@ -121,95 +90,49 @@ BRIDGE_REPO=ajint-my-vps \
 curl -fsSL https://raw.githubusercontent.com/taufec/ajint/main/install.sh | bash
 ```
 
-Current installer variables:
+Current compatibility variables:
 
-- `BRIDGE_HOST` - public IP or DNS name reachable from GitHub Actions
+- `BRIDGE_HOST` - public IP/DNS reachable from GitHub Actions
 - `BRIDGE_PORT` - SSH port, default `22`
-- `BRIDGE_USER` - SSH user, default current OS user
-- `BRIDGE_REPO` - generated private control repo name, default `ajint-machine-admin`
-
-The `BRIDGE_*` variable names are internal compatibility names for the current MVP and may later gain `AJINT_*` aliases.
-
-## Security model
-
-**Ajint is a privileged remote-execution control plane.** Anyone who can modify the generated private control repository may be able to execute commands as the configured SSH user.
-
-The generated workflow uses:
-
-- a dedicated SSH identity
-- strict SSH host-key checking
-- `BatchMode=yes`
-- `ForwardAgent=no`
-- `RequestTTY=no`
-- `ClearAllForwardings=yes`
-- minimum GitHub workflow permission (`contents: read`)
-- short-lived execution artifacts
-
-The installer does **not** silently change sudo policy. For root-level administration, deliberately install it as `root` or use a user with the exact non-interactive sudo privileges you intend to expose.
-
-Never commit private keys, API keys, passwords, tokens, `.env` files, or other secrets into the control repository.
-
-## Current support
-
-### Public Linux VPS/server via SSH — MVP implemented
-
-The target must be reachable from GitHub-hosted runners over SSH.
-
-### Laptop/private device/self-hosted runner — not implemented yet
-
-This is the planned path for laptops, desktops, homelabs, and machines behind NAT where inbound SSH should not be exposed.
+- `BRIDGE_USER` - current OS user, default `id -un`
+- `BRIDGE_REPO` - private control repo name, default `ajint-machine-admin`
 
 
 ## Parallel orchestration — ChatGPT commander mode
 
-Ajint can also execute a batch of deterministic VPS requests without adding another AI runtime. ChatGPT remains the only reasoning layer; the parallel workers are shell executors, not independent agents.
+ChatGPT remains the only reasoning layer. Ajint can execute deterministic shell requests in bounded parallel waves; the workers are executors, not independent AI agents.
 
 ```text
 ChatGPT commander
        ↓
-GitHub control repo
+private GitHub control repo
        ↓
 Ajint parallel orchestrator
        ↓
-wave 10: inspect-a.sh + inspect-b.sh + inspect-c.sh   (parallel)
+wave 10: inspect-a.sh + inspect-b.sh + inspect-c.sh  (parallel)
        ↓ success only
-wave 20: verify-a.sh + verify-b.sh                    (parallel)
+wave 20: verify-a.sh + verify-b.sh                   (parallel)
        ↓
-structured result artifact
-       ↓
-ChatGPT decides the next batch
+structured evidence → ChatGPT
 ```
 
-A batch is prepared under:
+Prepare a batch under `requests/batches/<batch-id>/<wave>/*.sh`. Only creating/changing `requests/dispatch.txt` to `<batch-id>` triggers execution. Requests in one wave run concurrently (default cap 4); waves run lexically and stop after the first failed wave. Conflicting writes and production deploys should use separate/single-worker waves.
 
-```text
-requests/batches/<batch-id>/
-  10-inspect/
-    logs.sh
-    services.sh
-  20-verify/
-    health.sh
-```
+## Security
 
-Preparing batch files does not execute them. The atomic trigger is `requests/dispatch.txt`; set its single line to `<batch-id>` only after the batch is ready. The parallel workflow defaults to at most 4 requests in one wave, runs waves in lexical order, waits for all workers in the current wave, and stops before later waves if any worker fails.
+Ajint is a privileged remote-execution control plane. Anyone able to modify the generated private control repo may be able to execute commands as the configured SSH user.
 
-For conflicting writes, put requests in separate waves. Production mutation or deploy should normally be a single-worker wave.
+The workflow uses a dedicated SSH identity, strict host-key checking, `BatchMode=yes`, no agent forwarding, no TTY, cleared forwarding, minimum GitHub workflow permissions and short-lived result artifacts.
 
-## Roadmap direction
+Ajint does **not** silently change sudo policy. Never commit private keys, tokens, passwords or `.env` files into the control repo.
 
-```text
-GitHub Agentic Workflows / other agent runtime
-              ↓
-            Ajint
-              ↓
-      VPS / server / device
-```
+## Current scope
 
-Ajint should stay small and AI-agnostic: execution, evidence, transport, and machine access. Agent memory, planning, policy, and higher-level reasoning can live in the agent runtime above it.
+### Public Linux server via SSH — implemented and E2E tested
 
-## Status
+### Laptop/private device/outbound runner — not implemented yet
 
-Early MVP. The SSH-mode adapter exists, but every new machine remains **unverified** until its own end-to-end acceptance test passes.
+Future agent runtimes (for example GitHub Agentic Workflows) can sit above Ajint without changing the Linux execution adapter.
 
 ## License
 
