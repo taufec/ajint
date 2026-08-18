@@ -94,7 +94,7 @@ Private machine control plane created by Ajint.
 
 Target: \`$BRIDGE_USER@$BRIDGE_HOST:$BRIDGE_PORT\`
 
-Flow: ChatGPT -> GitHub -> GitHub Actions -> SSH -> machine
+Flow: AI/Agent -> GitHub -> GitHub Actions -> Ajint -> machine
 
 Edit \`requests/current.sh\` to submit a remote task. Check the workflow artifact for stdout, stderr, exit code, and request SHA-256.
 DOC
@@ -126,6 +126,6 @@ echo "Control repo: https://github.com/$CONTROL_REPO"
 echo "Target: $BRIDGE_USER@$BRIDGE_HOST:$BRIDGE_PORT"
 echo
 echo 'Next:'
-echo '1. Connect the private control repo to ChatGPT GitHub.'
+echo '1. Connect the private control repo to your AI agent GitHub integration.'
 echo '2. Trigger the Machine Admin workflow once.'
 echo '3. Confirm the acceptance-test command exits 0.'
