@@ -19,7 +19,11 @@ jobs:
         run: bash -n install.sh tests/*.sh template/scripts/*.sh
       - name: Linux bootstrap contract
         run: bash tests/test-linux-bootstrap-contract.sh
+      - name: Vellum compatibility contract
+        run: bash tests/test-vellum-compat.sh
       - name: Parallel orchestrator behavior
         run: bash tests/test-orchestrator.sh
       - name: Hard routing gate template
         run: bash tests/test-hard-routing-gate-template.sh
+      - name: Public alpha repository contract
+        run: bash tests/test-public-alpha-contract.sh
