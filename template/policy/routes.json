@@ -1,0 +1,24 @@
+{
+  "routes": {
+    "linux.generic": {
+      "lane": "admin",
+      "workflow": "admin.yml",
+      "request": "requests/current.sh",
+      "priority": 10,
+      "specific_markers": []
+    },
+    "linux.parallel": {
+      "lane": "parallel",
+      "workflow": "parallel.yml",
+      "request": "requests/dispatch.txt",
+      "priority": 20,
+      "specific_markers": []
+    }
+  },
+  "protected_during_diagnosis": [
+    ".github/workflows/",
+    "scripts/policy_gate.py",
+    "scripts/evidence_validator.py",
+    "policy/"
+  ]
+}
