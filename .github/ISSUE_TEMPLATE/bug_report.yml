@@ -1,0 +1,47 @@
+name: Bug report
+description: Report a reproducible Ajint problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include tokens, private keys, passwords, private repository contents or sensitive machine data. Security vulnerabilities should follow SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Ajint version/tag/commit
+      placeholder: 0.1.0-alpha.1 or commit SHA
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Target Linux environment
+      placeholder: Debian 13, Ubuntu 24.04, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Redact sensitive values.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Relevant non-sensitive evidence
+      description: Workflow step, exit code, sanitized stdout/stderr, or policy verdict.
