@@ -184,7 +184,7 @@ else
   git -C "$WORK/repo" remote add origin "https://github.com/$CONTROL_REPO.git"
 fi
 
-mkdir -p "$WORK/repo/.github/workflows" "$WORK/repo/scripts" "$WORK/repo/requests" "$WORK/repo/requests/batches"
+mkdir -p "$WORK/repo/.github/workflows" "$WORK/repo/scripts" "$WORK/repo/policy" "$WORK/repo/requests" "$WORK/repo/requests/batches"
 for pair in \
   'template/.github/workflows/admin.yml:.github/workflows/admin.yml' \
   'template/.github/workflows/parallel.yml:.github/workflows/parallel.yml' \
@@ -193,12 +193,38 @@ for pair in \
   'template/scripts/run-wave.sh:scripts/run-wave.sh' \
   'template/scripts/run-orchestrator.sh:scripts/run-orchestrator.sh' \
   'template/scripts/run-dispatch.sh:scripts/run-dispatch.sh' \
-  'template/requests/current.sh:requests/current.sh'; do
+  'template/scripts/policy_gate.py:scripts/policy_gate.py' \
+  'template/scripts/evidence_validator.py:scripts/evidence_validator.py' \
+  'template/requests/current.sh:requests/current.sh' \
+  'template/requests/task.json:requests/task.json'; do
   src="${pair%%:*}"
   dest="${pair#*:}"
   gh api "repos/$UPSTREAM/contents/$src?ref=$AJINT_REF" --jq .content | tr -d '\n' | base64 -d > "$WORK/repo/$dest"
 done
-chmod +x "$WORK/repo/scripts/run-admin.sh" "$WORK/repo/scripts/run-request.sh" "$WORK/repo/scripts/run-wave.sh" "$WORK/repo/scripts/run-orchestrator.sh" "$WORK/repo/scripts/run-dispatch.sh" "$WORK/repo/requests/current.sh"
+
+# Seed machine-specific policy only when absent; never clobber custom routes or known-good history.
+for pair in \
+  'template/policy/routes.json:policy/routes.json' \
+  'template/policy/known-good.json:policy/known-good.json'; do
+  src="${pair%%:*}"
+  dest="${pair#*:}"
+  if [ ! -f "$WORK/repo/$dest" ]; then
+    gh api "repos/$UPSTREAM/contents/$src?ref=$AJINT_REF" --jq .content | tr -d '\n' | base64 -d > "$WORK/repo/$dest"
+  fi
+done
+
+# The installer acceptance workflow must carry a manifest whose hash matches current.sh.
+CURRENT_REQUEST_SHA="$(sha256sum "$WORK/repo/requests/current.sh" | awk '{print $1}')"
+cat > "$WORK/repo/requests/task.json" <<EOF
+{
+  "capability": "linux.generic",
+  "mode": "execute",
+  "intent": "Ajint installer acceptance test",
+  "request_sha256": "$CURRENT_REQUEST_SHA"
+}
+EOF
+
+chmod +x "$WORK/repo/scripts/run-admin.sh" "$WORK/repo/scripts/run-request.sh" "$WORK/repo/scripts/run-wave.sh" "$WORK/repo/scripts/run-orchestrator.sh" "$WORK/repo/scripts/run-dispatch.sh" "$WORK/repo/scripts/policy_gate.py" "$WORK/repo/scripts/evidence_validator.py" "$WORK/repo/requests/current.sh"
 
 cat > "$WORK/repo/README.md" <<DOC
 # $BRIDGE_REPO
@@ -217,9 +243,14 @@ Ajint-managed files:
 - \`scripts/run-wave.sh\`
 - \`scripts/run-orchestrator.sh\`
 - \`scripts/run-dispatch.sh\`
+- \`scripts/policy_gate.py\`
+- \`scripts/evidence_validator.py\`
 - \`requests/current.sh\`
+- \`requests/task.json\`
+- \`policy/routes.json\` (seeded only if absent)
+- \`policy/known-good.json\` (seeded only if absent)
 
-Single request: edit \`requests/current.sh\`.
+Single request: update \`requests/task.json\` with the intended capability/mode and the SHA-256 of the request, then edit the matching request lane. The policy gate rejects route or hash mismatches before SSH execution.
 
 Parallel batch: create \`requests/batches/<batch-id>/<wave>/*.sh\`, then create or change \`requests/dispatch.txt\` to that batch id as the final trigger. Requests inside one wave run concurrently; waves run in lexical order and stop on failure.
 
@@ -227,7 +258,7 @@ Check workflow artifacts for stdout, stderr, exit codes, request hashes, and the
 DOC
 
 # Preserve existing repo/history; only commit managed-file changes.
-git -C "$WORK/repo" add .github/workflows/admin.yml .github/workflows/parallel.yml scripts/run-admin.sh scripts/run-request.sh scripts/run-wave.sh scripts/run-orchestrator.sh scripts/run-dispatch.sh requests/current.sh README.md
+git -C "$WORK/repo" add .github/workflows/admin.yml .github/workflows/parallel.yml scripts/run-admin.sh scripts/run-request.sh scripts/run-wave.sh scripts/run-orchestrator.sh scripts/run-dispatch.sh scripts/policy_gate.py scripts/evidence_validator.py policy/routes.json policy/known-good.json requests/current.sh requests/task.json README.md
 if ! git -C "$WORK/repo" diff --cached --quiet; then
   GIT_AUTHOR_NAME='Ajint' \
   GIT_AUTHOR_EMAIL='ajint@localhost' \

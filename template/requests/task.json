@@ -1,0 +1,6 @@
+{
+  "capability": "linux.generic",
+  "mode": "execute",
+  "intent": "Ajint installer acceptance test",
+  "request_sha256": "c09c24b59bd372e6af6149cfc673915b33ebaa63317fd5206a2e95ce0ed494bd"
+}

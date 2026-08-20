@@ -18,6 +18,18 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Policy gate
+        id: gate
+        run: |
+          git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" > /tmp/changed-files.txt
+          python3 scripts/policy_gate.py \
+            --manifest requests/task.json \
+            --lane admin \
+            --request requests/current.sh \
+            --routes policy/routes.json \
+            --known-good policy/known-good.json \
+            --changed-files /tmp/changed-files.txt
+
       - name: Run request on machine
         env:
           ADMIN_VPS_HOST: ${{ secrets.ADMIN_VPS_HOST }}
@@ -27,8 +39,20 @@ jobs:
           ADMIN_VPS_KNOWN_HOSTS: ${{ secrets.ADMIN_VPS_KNOWN_HOSTS }}
         run: bash scripts/run-admin.sh requests/current.sh
 
+      - name: Write evidence verdict
+        if: ${{ always() && steps.gate.outcome == 'success' }}
+        run: |
+          mkdir -p result
+          exit_code=$(cat result/exit-code.txt 2>/dev/null || echo unavailable)
+          result_present=false
+          if [ -f result/exit-code.txt ] && [ -f result/stdout.txt ]; then result_present=true; fi
+          cat > /tmp/evidence.json <<EOF
+          {"request_commit":"${GITHUB_SHA}","route":"admin","workflow":"admin.yml","run_id":"${GITHUB_RUN_ID}","exit_code":"${exit_code}","result_present":${result_present}}
+          EOF
+          python3 scripts/evidence_validator.py /tmp/evidence.json | tee result/verdict.txt
+
       - name: Upload result
-        if: always()
+        if: ${{ always() && steps.gate.outcome == 'success' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: machine-admin-${{ github.run_id }}
