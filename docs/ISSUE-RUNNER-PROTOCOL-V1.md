@@ -51,3 +51,7 @@ The core exposes a deterministic repository-specific lock key such as `taufec--c
 ## Compatibility source
 
 The v1 contract is derived from the currently deployed `taufec/ajint-machine-admin` Issue Runner behavior verified during Phase 1 and Phase 2. Public core tests preserve the request validation, lifecycle marker and lock-key semantics without importing VPS-only implementation details.
+
+## Adapter target policy
+
+Phase 4A adds an additive validation split without changing `issue-runner.v1` wire markers. `validate_request_task()` performs capability, operation, request decoding and SHA-256 integrity checks but deliberately leaves target semantics to the adapter. The existing `validate_exec_task()` retains the repository-target rules used by the VPS reference path, preserving its behavior for current callers.
