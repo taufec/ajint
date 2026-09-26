@@ -192,5 +192,22 @@ class AdapterContractTests(unittest.TestCase):
         self.assertIn("subprocess", adapter_source)
 
 
+    def test_termux_adapter_rejects_unsafe_configured_target(self):
+        termux = importlib.import_module("ajint_adapters.termux")
+        with self.assertRaisesRegex(ValueError, "TARGET_DEVICE_INVALID"):
+            termux.TermuxExecAdapter(
+                target_device="../escape", allowed_authors={"taufec"}
+            )
+
+    def test_termux_adapter_rejects_ambiguous_repository_target(self):
+        local = importlib.import_module("ajint_adapters.local")
+        issue = self.issue()
+        payload = json.loads(issue["body"])
+        payload["target_repo"] = "taufec/ajint"
+        issue["body"] = json.dumps(payload)
+        with self.assertRaisesRegex(local.AdapterError, "TARGET_REPO_FORBIDDEN"):
+            self.adapter().parse_issue(issue)
+
+
 if __name__ == "__main__":
     unittest.main()
