@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-26 — Documentation baseline
+
+- Clarified that `taufec/ajint` is the stable/public line.
+- Recorded that private/device Ajint repositories may iterate ahead of this release.
+- No runtime, workflow, installer, transport or version change.
+
 All notable Ajint changes are documented here.
 
 Ajint follows Semantic Versioning. During `0.x`, interfaces and operational behavior may still change between releases.

@@ -38,3 +38,12 @@ Ajint is AI-agnostic, but direct dispatch requires the AI's GitHub integration t
 | Manual Git commit by operator | Yes, Ajint itself can still execute |
 
 Always test the integration capability before assuming that an AI product can dispatch Ajint requests.
+
+## Ajint family relationship
+
+This file describes compatibility for the **public stable line** only.
+
+- Public core: `taufec/ajint` `0.1.0-alpha.1`.
+- Reference/private implementation: `taufec/ajint-machine-admin` may be ahead of public core.
+- Device-specific iterations: `taufec/ajint-mimax`, `taufec/ajint-s21`, `taufec/ajint-zf7` may use different local runner generations.
+- Downstream Issue Runner behavior is not public-core compatibility until explicitly promoted in a future release.
