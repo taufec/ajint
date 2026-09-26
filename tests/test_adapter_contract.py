@@ -104,5 +104,76 @@ class AdapterContractTests(unittest.TestCase):
         self.assertNotIn("import hashlib", source)
 
 
+    def test_runtime_reuses_persisted_result_without_reexecution(self):
+        local = importlib.import_module("ajint_adapters.local")
+        with tempfile.TemporaryDirectory() as td:
+            store = local.FileResultStore(pathlib.Path(td))
+            store.persist(42, "AJINT_RESULT cached")
+            calls = []
+
+            def executor(command):
+                calls.append(command)
+                raise AssertionError("persisted result must not execute again")
+
+            runtime = local.LocalTaskRuntime(self.adapter(), store, executor)
+            prepared = runtime.prepare(self.issue())
+            self.assertTrue(prepared.from_store)
+            self.assertEqual(prepared.text, "AJINT_RESULT cached")
+            self.assertEqual(calls, [])
+            runtime.mark_published(42)
+            self.assertFalse(store.exists(42))
+
+    def test_runtime_executes_read_without_write_lock_and_persists_result(self):
+        local = importlib.import_module("ajint_adapters.local")
+
+        class NeverLock:
+            def acquire(self):
+                raise AssertionError("read must not acquire write lock")
+
+        with tempfile.TemporaryDirectory() as td:
+            store = local.FileResultStore(pathlib.Path(td))
+            runtime = local.LocalTaskRuntime(
+                self.adapter(),
+                store,
+                lambda command: local.CommandOutcome(0, "ok", ""),
+                write_lock=NeverLock(),
+            )
+            prepared = runtime.prepare(self.issue(operation="read"))
+            self.assertFalse(prepared.from_store)
+            self.assertIn("AJINT_RESULT run_id=run-adapter-contract-20260926 exit_code=0", prepared.text)
+            self.assertTrue(store.exists(42))
+
+    def test_runtime_serializes_write_through_adapter_lock(self):
+        local = importlib.import_module("ajint_adapters.local")
+        from contextlib import contextmanager
+
+        class CountingLock:
+            def __init__(self):
+                self.entries = 0
+
+            @contextmanager
+            def acquire(self):
+                self.entries += 1
+                yield
+
+        with tempfile.TemporaryDirectory() as td:
+            lock = CountingLock()
+            store = local.FileResultStore(pathlib.Path(td))
+            runtime = local.LocalTaskRuntime(
+                self.adapter(),
+                store,
+                lambda command: local.CommandOutcome(0, "written", ""),
+                write_lock=lock,
+            )
+            runtime.prepare(self.issue(operation="write"))
+            self.assertEqual(lock.entries, 1)
+
+    def test_termux_lock_rejects_unsafe_target_name(self):
+        termux = importlib.import_module("ajint_adapters.termux")
+        with tempfile.TemporaryDirectory() as td:
+            with self.assertRaisesRegex(ValueError, "TARGET_DEVICE_INVALID"):
+                termux.TermuxWriteLock(pathlib.Path(td), "../escape")
+
+
 if __name__ == "__main__":
     unittest.main()
