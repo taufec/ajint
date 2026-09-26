@@ -63,9 +63,14 @@ def validate_issue_envelope(issue: Mapping[str, Any], *, allowed_authors: Iterab
     return IssueEnvelope(run_id, capability, mode, payload)
 
 
-def validate_exec_task(
+def validate_request_task(
     envelope: IssueEnvelope, *, allowed_capabilities: Iterable[str]
 ) -> ExecTask:
+    """Validate capability, operation and request integrity without target policy.
+
+    OS/device adapters own their target contract. ``validate_exec_task`` remains
+    the repository-target compatibility wrapper used by the existing VPS path.
+    """
     if envelope.capability not in set(allowed_capabilities):
         raise BundleError("CAPABILITY_DENIED")
     payload = envelope.payload
@@ -79,21 +84,29 @@ def validate_exec_task(
     if hashlib.sha256(request).hexdigest() != payload.get("request_sha256"):
         raise BundleError("REQUEST_HASH_MISMATCH")
 
-    target_repo = payload.get("target_repo")
-    if operation == "write":
-        if not isinstance(target_repo, str) or not TARGET_REPO.fullmatch(target_repo):
-            raise BundleError("TARGET_REPO_REQUIRED")
-    elif target_repo is not None:
-        raise BundleError("READ_TARGET_REPO_FORBIDDEN")
-
     return ExecTask(
         envelope.run_id,
         envelope.capability,
         envelope.mode,
         operation,
-        target_repo,
+        payload.get("target_repo"),
         request,
     )
+
+
+def validate_exec_task(
+    envelope: IssueEnvelope, *, allowed_capabilities: Iterable[str]
+) -> ExecTask:
+    task = validate_request_task(
+        envelope, allowed_capabilities=allowed_capabilities
+    )
+    target_repo = task.target_repo
+    if task.operation == "write":
+        if not isinstance(target_repo, str) or not TARGET_REPO.fullmatch(target_repo):
+            raise BundleError("TARGET_REPO_REQUIRED")
+    elif target_repo is not None:
+        raise BundleError("READ_TARGET_REPO_FORBIDDEN")
+    return task
 
 
 def heartbeat_payload(

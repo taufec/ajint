@@ -14,6 +14,7 @@ from .protocol import (
     lock_key_for_repo,
     validate_exec_task,
     validate_issue_envelope,
+    validate_request_task,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "lock_key_for_repo",
     "validate_exec_task",
     "validate_issue_envelope",
+    "validate_request_task",
 ]
