@@ -26,6 +26,7 @@ There is currently no verified Ajint macOS or Windows implementation in the proj
 `validate_exec_task()` remains the backward-compatible repository-target wrapper for the existing VPS contract: writes require `target_repo`; reads forbid it.
 
 Device adapters call `validate_request_task()` and then enforce their own explicit target contract, such as `target_device=s21`.
+The Termux adapter also rejects a simultaneous `target_repo` field so one request cannot carry two conflicting routing targets.
 
 ## Durable local execution contract
 

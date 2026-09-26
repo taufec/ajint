@@ -50,12 +50,14 @@ class LocalExecAdapter:
         target: str,
         target_error: str,
         allowed_authors: Iterable[str],
+        forbidden_fields: Mapping[str, str] | None = None,
     ) -> None:
         self.capability = capability
         self.target_field = target_field
         self.target = target
         self.target_error = target_error
         self.allowed_authors = frozenset(allowed_authors)
+        self.forbidden_fields = dict(forbidden_fields or {})
 
     def parse_issue(self, issue: Mapping[str, Any]) -> AdapterTask:
         if not protocol.is_run_issue_candidate(issue):
@@ -69,6 +71,10 @@ class LocalExecAdapter:
             )
         except protocol.BundleError as exc:
             raise AdapterError(_adapter_reason(exc)) from exc
+
+        for field, reason in self.forbidden_fields.items():
+            if envelope.payload.get(field) is not None:
+                raise AdapterError(reason)
 
         target = envelope.payload.get(self.target_field)
         if target != self.target:

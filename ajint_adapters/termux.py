@@ -20,12 +20,15 @@ TARGET_DEVICE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
 class TermuxExecAdapter(LocalExecAdapter):
     def __init__(self, *, target_device: str, allowed_authors: Iterable[str]) -> None:
+        if not TARGET_DEVICE_NAME.fullmatch(target_device):
+            raise ValueError("TARGET_DEVICE_INVALID")
         super().__init__(
             capability="android.termux.exec",
             target_field="target_device",
             target=target_device,
             target_error="TARGET_DEVICE_INVALID",
             allowed_authors=allowed_authors,
+            forbidden_fields={"target_repo": "TARGET_REPO_FORBIDDEN"},
         )
 
 
