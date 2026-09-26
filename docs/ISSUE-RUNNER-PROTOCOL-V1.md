@@ -8,6 +8,7 @@ This document defines the platform-neutral contract extracted from the proven do
 
 The `ajint_core.protocol` module owns only semantics that can be shared across Linux, macOS, Windows and Android/Termux adapters:
 
+- exact `AJINT_RUN` issue candidate filtering (excluding pull requests)
 - GitHub issue envelope validation
 - run id, capability, mode and operation validation
 - base64 request decoding plus SHA-256 integrity verification
@@ -39,6 +40,7 @@ Adapters can render lifecycle state using the shared formatting contract:
 - `AJINT_PROGRESS run_id=... state=... heartbeat=... elapsed=...`
 - `AJINT_RESULT run_id=... exit_code=...`
 - `AJINT_FAILED run_id=... reason=...`
+- `AJINT_REJECTED reason=...`
 
 Heartbeat payload fields are `run_id`, `state`, `heartbeat_epoch`, `elapsed_seconds` and `detail`.
 
