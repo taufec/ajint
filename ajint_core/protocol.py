@@ -18,6 +18,10 @@ class BundleError(ValueError):
     pass
 
 
+def is_run_issue_candidate(issue: Mapping[str, Any]) -> bool:
+    return not issue.get("pull_request") and issue.get("title") == "AJINT_RUN"
+
+
 @dataclass(frozen=True)
 class IssueEnvelope:
     run_id: str
@@ -129,6 +133,10 @@ def format_progress(
 
 def format_result(run_id: str, exit_code: int, output: str) -> str:
     return f"AJINT_RESULT run_id={run_id} exit_code={exit_code}\n\n```text\n{output[-3500:]}\n```"
+
+
+def format_rejection(reason: str) -> str:
+    return f"AJINT_REJECTED reason={reason}"
 
 
 def format_failure(run_id: str, reason: str, output: str = "") -> str:
