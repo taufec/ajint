@@ -129,3 +129,64 @@ class FileResultStore:
 
     def delete(self, issue_number: int) -> None:
         self.path_for(issue_number).unlink(missing_ok=True)
+
+
+@dataclass(frozen=True)
+class CommandOutcome:
+    exit_code: int
+    stdout: str = ""
+    stderr: str = ""
+
+
+@dataclass(frozen=True)
+class PreparedResult:
+    issue_number: int
+    text: str
+    from_store: bool
+    task: AdapterTask | None = None
+
+
+class LocalTaskRuntime:
+    """Durable execution coordinator for a local Issue Runner.
+
+    Publication is deliberately separate from execution. A finished result is
+    persisted first and remains there until ``mark_published`` is called. If a
+    process restarts or GitHub is unavailable, ``prepare`` returns the stored
+    result without executing the command again.
+    """
+
+    def __init__(self, adapter, store: FileResultStore, executor, *, write_lock=None) -> None:
+        self.adapter = adapter
+        self.store = store
+        self.executor = executor
+        self.write_lock = write_lock
+
+    def prepare(self, issue: Mapping[str, Any]) -> PreparedResult:
+        number = issue.get("number")
+        if isinstance(number, int) and self.store.exists(number):
+            return PreparedResult(number, self.store.read(number), True, None)
+
+        task = self.adapter.parse_issue(issue)
+        if task.operation == "write" and self.write_lock is None:
+            raise AdapterError("WRITE_LOCK_REQUIRED")
+
+        from contextlib import nullcontext
+
+        lock_context = (
+            self.write_lock.acquire() if task.operation == "write" else nullcontext()
+        )
+        try:
+            with lock_context:
+                outcome = self.executor(task.command)
+            if not isinstance(outcome, CommandOutcome):
+                raise TypeError("executor must return CommandOutcome")
+            output = (outcome.stdout or "") + (outcome.stderr or "")
+            text = self.adapter.format_result(task.run_id, outcome.exit_code, output)
+        except Exception as exc:
+            text = self.adapter.format_result(task.run_id, 1, str(exc))
+
+        self.store.persist(task.issue_number, text)
+        return PreparedResult(task.issue_number, text, False, task)
+
+    def mark_published(self, issue_number: int) -> None:
+        self.store.delete(issue_number)

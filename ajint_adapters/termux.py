@@ -7,10 +7,14 @@ of OS lock/service assumptions.
 from __future__ import annotations
 
 from contextlib import contextmanager
+import re
 from pathlib import Path
 from typing import Iterable, Iterator, TextIO
 
 from .local import LocalExecAdapter
+
+
+TARGET_DEVICE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
 
 class TermuxExecAdapter(LocalExecAdapter):
@@ -26,8 +30,9 @@ class TermuxExecAdapter(LocalExecAdapter):
 
 class TermuxWriteLock:
     def __init__(self, root: Path, target_device: str) -> None:
-        safe_target = target_device.replace("/", "--")
-        self.path = Path(root) / "locks" / f"device--{safe_target}.write.lock"
+        if not TARGET_DEVICE_NAME.fullmatch(target_device):
+            raise ValueError("TARGET_DEVICE_INVALID")
+        self.path = Path(root) / "locks" / f"device--{target_device}.write.lock"
 
     @contextmanager
     def acquire(self) -> Iterator[None]:
