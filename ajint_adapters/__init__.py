@@ -9,7 +9,7 @@ from .local import (
     LocalTaskRuntime,
     PreparedResult,
 )
-from .termux import TermuxExecAdapter, TermuxWriteLock
+from .termux import TermuxExecAdapter, TermuxShellExecutor, TermuxWriteLock
 
 __all__ = [
     "AdapterError",
@@ -20,5 +20,6 @@ __all__ = [
     "LocalTaskRuntime",
     "PreparedResult",
     "TermuxExecAdapter",
+    "TermuxShellExecutor",
     "TermuxWriteLock",
 ]

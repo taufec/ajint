@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import re
+import subprocess
 from pathlib import Path
 from typing import Iterable, Iterator, TextIO
 
-from .local import LocalExecAdapter
+from .local import CommandOutcome, LocalExecAdapter
 
 
 TARGET_DEVICE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
@@ -46,3 +47,22 @@ class TermuxWriteLock:
         finally:
             fcntl.flock(handle, fcntl.LOCK_UN)
             handle.close()
+
+
+
+class TermuxShellExecutor:
+    """Execute a command in the device-local Termux shell."""
+
+    def __init__(self, *, timeout_seconds: float = 3600) -> None:
+        self.timeout_seconds = timeout_seconds
+
+    def __call__(self, command: str) -> CommandOutcome:
+        result = subprocess.run(
+            command,
+            shell=True,
+            text=True,
+            capture_output=True,
+            timeout=self.timeout_seconds,
+            start_new_session=True,
+        )
+        return CommandOutcome(result.returncode, result.stdout, result.stderr)
