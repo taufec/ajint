@@ -175,5 +175,22 @@ class AdapterContractTests(unittest.TestCase):
                 termux.TermuxWriteLock(pathlib.Path(td), "../escape")
 
 
+    def test_termux_executor_owns_local_process_execution(self):
+        termux = importlib.import_module("ajint_adapters.termux")
+        executor = termux.TermuxShellExecutor(timeout_seconds=5)
+        outcome = executor("printf ok; printf err >&2; exit 3")
+        self.assertEqual(outcome.exit_code, 3)
+        self.assertEqual(outcome.stdout, "ok")
+        self.assertEqual(outcome.stderr, "err")
+
+    def test_process_execution_dependency_stays_outside_common_core(self):
+        protocol = importlib.import_module("ajint_core.protocol")
+        termux = importlib.import_module("ajint_adapters.termux")
+        core_source = pathlib.Path(protocol.__file__).read_text()
+        adapter_source = pathlib.Path(termux.__file__).read_text()
+        self.assertNotIn("subprocess", core_source)
+        self.assertIn("subprocess", adapter_source)
+
+
 if __name__ == "__main__":
     unittest.main()
