@@ -190,3 +190,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Ajint family status
+
+This repository is the **stable/public Ajint line**. The current published runtime remains `0.1.0-alpha.1` and uses the GitHub Actions -> SSH execution model documented above.
+
+Private/device implementations (`ajint-machine-admin`, `ajint-mimax`, `ajint-s21`, `ajint-zf7`) are active iteration lines. Some are already experimenting with or operating local Issue Runner designs. Those downstream implementations do **not** change this repository's released behavior automatically.
+
+Promotion of a downstream architecture into public Ajint is a separate release task with compatibility review, migration notes, regression tests and an explicit version change.
