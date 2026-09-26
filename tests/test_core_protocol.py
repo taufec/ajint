@@ -126,5 +126,23 @@ class CoreProtocolTests(unittest.TestCase):
             self.assertNotIn(forbidden, source)
 
 
+    def test_run_issue_candidate_filter_matches_downstream(self):
+        protocol = self.protocol()
+        self.assertTrue(protocol.is_run_issue_candidate({"title": "AJINT_RUN"}))
+        self.assertFalse(protocol.is_run_issue_candidate({"title": "OTHER"}))
+        self.assertFalse(
+            protocol.is_run_issue_candidate(
+                {"title": "AJINT_RUN", "pull_request": {"url": "https://example.invalid"}}
+            )
+        )
+
+    def test_rejection_marker_matches_downstream(self):
+        protocol = self.protocol()
+        self.assertEqual(
+            protocol.format_rejection("REQUEST_HASH_MISMATCH"),
+            "AJINT_REJECTED reason=REQUEST_HASH_MISMATCH",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
