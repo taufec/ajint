@@ -27,5 +27,7 @@ jobs:
         run: bash tests/test-hard-routing-gate-template.sh
       - name: Cross-platform core protocol
         run: PYTHONPATH=. python3 tests/test_core_protocol.py
+      - name: OS adapter contract
+        run: PYTHONPATH=. python3 tests/test_adapter_contract.py
       - name: Public alpha repository contract
         run: bash tests/test-public-alpha-contract.sh
